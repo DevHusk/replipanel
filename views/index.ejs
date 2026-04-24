@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dhoom MC Panel</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@4.19.0/css/xterm.css" />
+    <script src="https://cdn.jsdelivr.net/npm/xterm@4.19.0/lib/xterm.js"></script>
+    <style>
+        body { background: #0b0f1a; color: #e2e8f0; font-family: 'Inter', sans-serif; margin: 0; display: flex; }
+        .sidebar { width: 240px; background: #161b2b; height: 100vh; padding: 20px; border-right: 1px solid #2d3748; }
+        .content { flex: 1; padding: 30px; }
+        .card { background: #1a202c; border-radius: 12px; padding: 20px; border: 1px solid #2d3748; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        #terminal-container { background: #000; border-radius: 8px; padding: 10px; min-height: 400px; }
+        .status { color: #48bb78; font-weight: bold; margin-bottom: 20px; }
+        .btn-start { background: #3182ce; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-start:hover { background: #2b6cb0; }
+        h2 { color: #63b3ed; margin-top: 0; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>🔥 Dhoom Panel</h2>
+        <p style="opacity: 0.6;">v1.0 Beta</p>
+        <nav style="margin-top: 40px;">
+            <p>● Dashboard</p>
+            <p style="opacity: 0.5;">● File Manager (In-Replit)</p>
+            <p style="opacity: 0.5;">● Settings</p>
+        </nav>
+    </div>
+    <div class="content">
+        <div class="status">Status: Running</div>
+        <div class="card">
+            <h3 style="margin-top:0;">Live Console</h3>
+            <div id="terminal-container"></div>
+            <div style="margin-top: 20px;">
+                <button class="btn-start" onclick="startServer()">Launch Minecraft</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const term = new Terminal({
+            theme: { background: '#000000', foreground: '#f8fafc' },
+            cursorBlink: true,
+            fontSize: 14
+        });
+        term.open(document.getElementById('terminal-container'));
+
+        socket.on('terminal-output', (data) => { term.write(data); });
+        term.onData(data => { socket.emit('terminal-input', data); });
+
+        function startServer() {
+            socket.emit('terminal-input', 'java -Xmx1G -jar server.jar nogui\n');
+        }
+    </script>
+</body>
+</html>
