@@ -1,40 +1,38 @@
 const express = require('express');
+const { spawn } = require('child_process');
 const http = require('http');
 const { Server } = require('socket.io');
-const pty = require('node-pty');
-const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
 app.set('view engine', 'ejs');
+app.use(express.static('public'));
 
-app.get('/', (req, res) => {
-    res.render('index');
-});
+let mcProcess = null;
 
-// Terminal setup - Bash open karega
-const shell = pty.spawn('bash', [], {
-    name: 'xterm-color',
-    cols: 80,
-    rows: 24,
-    cwd: process.cwd(),
-    env: process.env
-});
-
-shell.onData((data) => {
-    io.emit('terminal-output', data);
-});
+app.get('/', (req, res) => { res.render('index'); });
 
 io.on('connection', (socket) => {
-    console.log('User connected to Panel');
-    socket.on('terminal-input', (data) => {
-        shell.write(data);
+    socket.on('start-server', () => {
+        if (mcProcess) return socket.emit('output', '\x1b[31mServer already running!\x1b[0m\r\n');
+
+        // Minecraft Launch Command
+        mcProcess = spawn('java', ['-Xmx1G', '-jar', 'server.jar', 'nogui']);
+
+        mcProcess.stdout.on('data', (data) => { io.emit('output', data.toString().replace(/\n/g, '\r\n')); });
+        mcProcess.stderr.on('data', (data) => { io.emit('output', data.toString().replace(/\n/g, '\r\n')); });
+
+        mcProcess.on('exit', () => {
+            io.emit('output', '\r\n\x1b[31mServer Stopped.\x1b[0m\r\n');
+            mcProcess = null;
+        });
+    });
+
+    socket.on('command', (cmd) => {
+        if (mcProcess) mcProcess.stdin.write(cmd + '\n');
     });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Dhoom Panel is live on port ${PORT}`);
-});
+server.listen(3000, () => console.log('Panel Live!'));
